@@ -1,0 +1,44 @@
+# CD: todo push na main que mexa nos manifests (inclusive o commit automatico
+# que as APIs fazem trocando a versao da imagem) e aplicado no AKS.
+name: Deploy no AKS
+
+on:
+  push:
+    branches: [main]
+    paths: ["base/**", "aks/**"]
+  workflow_dispatch:   # botao "Run workflow" para aplicar na mao
+
+# dois deploys nunca rodam ao mesmo tempo; o segundo espera o primeiro
+concurrency:
+  group: deploy-aks
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write   # token OIDC para o login na Azure
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Acesso ao cluster
+        run: az aks get-credentials -g rg-petservices -n aks-petservices
+
+      - name: Aplicar manifests
+        run: kubectl apply -k aks
+
+      # falha o workflow se a versao nova nao ficar pronta (o pod antigo
+      # continua no ar ate o novo passar na readiness probe)
+      - name: Esperar o rolling update
+        run: |
+          for app in petservices agendamento historico; do
+            kubectl rollout status deploy/$app -n petservices --timeout=5m
+          done

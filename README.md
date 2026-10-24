@@ -80,3 +80,14 @@ kubectl delete -k base   # (no AKS: kubectl delete -k aks)
 # os discos (PVC) dos StatefulSets continuam; apague com:
 kubectl delete pvc --all -n infra
 ```
+
+## CI/CD (GitHub Actions)
+
+```
+push na main de uma API ──► testes ──► imagem <commit> no ACR ──► commit trocando newTag em aks/kustomization.yaml
+                                                                       └──► deploy.yml deste repo ──► kubectl apply -k aks
+```
+
+- Login na Azure sem senha (OIDC): `./configurar-github-oidc.sh` cria as identidades (uma vez).
+- Os workflows das APIs precisam do secret `K8S_REPO_TOKEN` (token com escrita neste repositorio).
+- Como o GitHub Actions faz commits aqui, rode `git pull` antes de editar.
