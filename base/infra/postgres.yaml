@@ -1,0 +1,107 @@
+# PostgreSQL com os 3 bancos (cadastros_db, agendamento_db, historico_db).
+# Cada API tem o seu proprio usuario, que so enxerga o proprio banco.
+
+# script que roda SO na primeira vez que o volume do banco e criado
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: infra
+data:
+  01-criar-bancos.sh: |
+    #!/bin/sh
+    set -e
+    criar() {
+      psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" \
+        -v usuario="$1" -v senha="$2" -v banco="$3" <<'EOSQL'
+    CREATE USER :"usuario" WITH PASSWORD :'senha';
+    CREATE DATABASE :"banco" OWNER :"usuario";
+    REVOKE CONNECT ON DATABASE :"banco" FROM PUBLIC;
+    EOSQL
+    }
+    criar cadastros   "$CADASTROS_DB_PASSWORD"   cadastros_db
+    criar agendamento "$AGENDAMENTO_DB_PASSWORD" agendamento_db
+    criar historico   "$HISTORICO_DB_PASSWORD"   historico_db
+---
+# Service "headless" (sem IP proprio): o nome postgres.infra.svc.cluster.local
+# aponta direto para o pod do banco
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: infra
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+---
+# StatefulSet (e nao Deployment) porque o banco guarda estado:
+# o pod mantem sempre o mesmo nome e o mesmo disco, mesmo se for recriado
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: infra
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            # subpasta: a raiz do disco pode ter um "lost+found" que o Postgres recusa
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          envFrom:
+            - secretRef:
+                name: postgres-credenciais
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          volumeMounts:
+            - name: dados
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: init
+          configMap:
+            name: postgres-init
+            defaultMode: 0755
+  # cada pod do StatefulSet ganha o seu proprio disco persistente (PersistentVolumeClaim)
+  volumeClaimTemplates:
+    - metadata:
+        name: dados
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi

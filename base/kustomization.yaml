@@ -1,0 +1,11 @@
+# junta todos os manifests: "kubectl apply -k ." aplica tudo de uma vez
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - 00-namespaces.yaml
+  - infra/postgres.yaml
+  - infra/kafka.yaml
+  - apps/petservices.yaml
+  - apps/agendamento.yaml
+  - apps/historico.yaml
+  - network-policies.yaml

@@ -1,0 +1,9 @@
+# nunca versionar credenciais: as senhas reais ficam so nos Secrets do cluster
+.env
+*.env.local
+kubeconfig*
+.kube/
+*.pem
+*.key
+*.crt
+secrets*.yaml

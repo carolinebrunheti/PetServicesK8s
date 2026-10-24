@@ -1,0 +1,21 @@
+# Emissor de certificados do Let's Encrypt (gratuito, vale 90 dias, o
+# cert-manager renova sozinho). Para provar que o dominio e nosso, o
+# Let's Encrypt acessa http://<dominio>/.well-known/acme-challenge/...; o
+# cert-manager cria essa rota temporaria no listener http do Gateway.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-conta
+    solvers:
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - kind: Gateway
+                name: petservices
+                namespace: petservices
+                sectionName: http

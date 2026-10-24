@@ -1,0 +1,11 @@
+# namespaces funcionam como "pastas" dentro do cluster:
+# a infraestrutura (banco e Kafka) fica separada das APIs
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: infra
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: petservices

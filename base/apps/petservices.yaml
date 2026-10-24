@@ -1,0 +1,92 @@
+# API petservices: Deployment (as copias rodando) + Service (o nome dela na rede do cluster)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: petservices
+  namespace: petservices
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: petservices
+  template:
+    metadata:
+      labels:
+        app: petservices
+    spec:
+      containers:
+        - name: petservices
+          image: petservices:0.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8081
+          env:
+            # variaveis de ambiente tem prioridade sobre o application.properties,
+            # entao o mesmo jar roda local (localhost) e no cluster (nomes dos Services)
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres.infra.svc.cluster.local:5432/cadastros_db
+            - name: SPRING_DATASOURCE_USERNAME
+              value: cadastros
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              value: kafka.infra.svc.cluster.local:9092
+            # no cluster a API fica atras do proxy do Gateway: o Tomcat passa a ler o IP
+            # real do cliente no X-Forwarded-For, mas so quando a requisicao vem de um
+            # IP interno (10.x etc.). O limite de tentativas de login depende disso.
+            - name: SERVER_FORWARD_HEADERS_STRATEGY
+              value: native
+          # DB_PASSWORD, JWT_SECRET (e o admin inicial, no petservices) vem do Secret
+          envFrom:
+            - secretRef:
+                name: petservices-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              memory: 768Mi
+          # startup: da ate 2,5 min para o Spring subir antes de checar se esta vivo
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          # liveness: se falhar, o Kubernetes reinicia o container
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 10
+          # readiness: enquanto falhar, o Service nao manda requisicoes para este pod
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            # com o disco do container somente-leitura, o Tomcat grava os temporarios aqui
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: petservices
+  namespace: petservices
+spec:
+  selector:
+    app: petservices
+  ports:
+    - name: http
+      port: 8081
+      targetPort: http

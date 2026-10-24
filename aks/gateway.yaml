@@ -1,0 +1,124 @@
+# Porta de entrada da internet. O Istio do AKS (GatewayClass approuting-istio)
+# cria sozinho um Deployment com o proxy e um Service LoadBalancer com IP publico.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: petservices
+  namespace: petservices
+  annotations:
+    # o cert-manager ve esta anotacao e cria o certificado do listener https
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  gatewayClassName: approuting-istio
+  infrastructure:
+    annotations:
+      # vira o endereco petservices-f3c82b.eastus2.cloudapp.azure.com
+      service.beta.kubernetes.io/azure-dns-label-name: petservices-f3c82b
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: petservices-gateway
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: petservices-f3c82b.eastus2.cloudapp.azure.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: petservices-tls   # Secret criado pelo cert-manager
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+# ajustes nos recursos que o Istio cria para o Gateway.
+# externalTrafficPolicy Local: o Kubernetes entrega a requisicao ao proxy sem
+# trocar o IP de origem, entao o proxy ve (e repassa no X-Forwarded-For) o IP
+# real do cliente em vez do IP do no.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: petservices-gateway
+  namespace: petservices
+data:
+  service: |
+    spec:
+      externalTrafficPolicy: Local
+---
+# quem chegar por http e mandado para https (a rota do desafio do Let's Encrypt
+# e mais especifica e continua funcionando)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: redirecionar-https
+  namespace: petservices
+spec:
+  parentRefs:
+    - name: petservices
+      sectionName: http
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
+---
+# as rotas das APIs so atendem no https.
+# cada HTTPRoute diz: "o que chegar no Gateway com este caminho vai para este Service"
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: petservices
+  namespace: petservices
+spec:
+  parentRefs:
+    - name: petservices
+      sectionName: https
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: /auth }
+        - path: { type: PathPrefix, value: /dono }
+        - path: { type: PathPrefix, value: /pet }
+        - path: { type: PathPrefix, value: /veterinario }
+        - path: { type: PathPrefix, value: /atendente }
+      backendRefs:
+        - name: petservices
+          port: 8081
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: agendamento
+  namespace: petservices
+spec:
+  parentRefs:
+    - name: petservices
+      sectionName: https
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: /agendarConsulta }
+      backendRefs:
+        - name: agendamento
+          port: 8082
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: historico
+  namespace: petservices
+spec:
+  parentRefs:
+    - name: petservices
+      sectionName: https
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: /historico }
+      backendRefs:
+        - name: historico
+          port: 8084

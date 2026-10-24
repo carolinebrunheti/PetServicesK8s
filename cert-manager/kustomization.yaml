@@ -1,0 +1,16 @@
+# cert-manager: pede e renova sozinho os certificados HTTPS do Let's Encrypt.
+# Instalar ANTES do "kubectl apply -k aks" (o aks usa o ClusterIssuer dele).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://github.com/cert-manager/cert-manager/releases/download/v1.21.2/cert-manager.yaml
+patches:
+  # liga a integracao com o Gateway API (vem desligada por padrao)
+  - target:
+      kind: Deployment
+      name: cert-manager
+      namespace: cert-manager
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --enable-gateway-api
