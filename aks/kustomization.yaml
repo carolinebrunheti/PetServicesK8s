@@ -15,4 +15,4 @@ images:
     newTag: "0.1"
   - name: historico
     newName: acrpetservicesf3c82b.azurecr.io/historico
-    newTag: "0.1"
+    newTag: "c56af76"
