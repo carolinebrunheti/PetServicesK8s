@@ -87,6 +87,7 @@ spec:
         - path: { type: PathPrefix, value: /pet }
         - path: { type: PathPrefix, value: /veterinario }
         - path: { type: PathPrefix, value: /atendente }
+        - path: { type: PathPrefix, value: /admin }
       backendRefs:
         - name: petservices
           port: 8081
