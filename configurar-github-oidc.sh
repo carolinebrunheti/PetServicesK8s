@@ -15,6 +15,22 @@ DONO=carolinebrunheti
 REPOS_APIS=(PetServices PetAgendamentoApi HistoricoPetApi1)
 REPO_K8S=PetServicesK8s
 
+# O GitHub identifica o repositorio no token pelo nome E pelo id numerico
+# (subject "repo:dono@ID/repo@ID:ref:..."): se o repo for apagado e recriado
+# com o mesmo nome, o id muda e a Azure deixa de confiar nele.
+# Os ids aparecem no log do passo azure/login ("subject claim").
+DONO_ID=67209435
+declare -A REPO_ID=(
+    [PetServices]=1410783770
+    [PetAgendamentoApi]=1416117658
+    [HistoricoPetApi1]=1416187029
+    [PetServicesK8s]=1431680364
+)
+
+for repo in "${!REPO_ID[@]}"; do
+    [[ ${REPO_ID[$repo]} =~ ^[0-9]+$ ]] || { echo "Preencha o id do repositorio $repo no script."; exit 1; }
+done
+
 ASSINATURA=$(az account show --query id -o tsv)
 TENANT=$(az account show --query tenantId -o tsv)
 ACR_ID=$(az acr show -n "$ACR" --query id -o tsv)
@@ -34,13 +50,17 @@ criar_identidade() {
 # "confie nos tokens do GitHub Actions deste repositorio, branch main"
 confiar_no_repo() {
     local app_id=$1 repo=$2
-    az ad app federated-credential list --id "$app_id" --query "[].name" -o tsv | grep -qx "$repo-main" && return
-    az ad app federated-credential create --id "$app_id" --parameters "{
+    local params="{
         \"name\": \"$repo-main\",
         \"issuer\": \"https://token.actions.githubusercontent.com\",
-        \"subject\": \"repo:$DONO/$repo:ref:refs/heads/main\",
+        \"subject\": \"repo:$DONO@$DONO_ID/$repo@${REPO_ID[$repo]}:ref:refs/heads/main\",
         \"audiences\": [\"api://AzureADTokenExchange\"]
-    }" >/dev/null
+    }"
+    if az ad app federated-credential list --id "$app_id" --query "[].name" -o tsv | grep -qx "$repo-main"; then
+        az ad app federated-credential update --id "$app_id" --federated-credential-id "$repo-main" --parameters "$params" >/dev/null
+    else
+        az ad app federated-credential create --id "$app_id" --parameters "$params" >/dev/null
+    fi
 }
 
 echo "1/2 identidade de build (AcrPush no $ACR)..."
