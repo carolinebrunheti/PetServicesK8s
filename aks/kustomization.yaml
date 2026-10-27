@@ -9,7 +9,7 @@ resources:
 images:
   - name: petservices
     newName: acrpetservicesf3c82b.azurecr.io/petservices
-    newTag: "0.1"
+    newTag: "b05d85a"
   - name: agendamento
     newName: acrpetservicesf3c82b.azurecr.io/agendamento
     newTag: "f9c9623"
