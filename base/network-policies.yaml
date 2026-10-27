@@ -60,6 +60,10 @@ spec:
         - podSelector:
             matchLabels:
               app: kafka
+        # painel web (acessado so por port-forward)
+        - podSelector:
+            matchLabels:
+              app: kafka-ui
       ports:
         - port: 9092
 ---

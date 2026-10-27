@@ -1,0 +1,70 @@
+# Painel web do Kafka. SEM rota no Gateway: so se acessa pelo tunel do kubectl
+#   kubectl port-forward -n infra svc/kafka-ui 8090:8080  →  http://localhost:8090
+# Modo somente leitura: da para ver topicos e mensagens, mas nao apagar nem enviar.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-ui
+  namespace: infra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-ui
+  template:
+    metadata:
+      labels:
+        app: kafka-ui
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100   # usuario kafkaui da imagem
+      containers:
+        - name: kafka-ui
+          image: ghcr.io/kafbat/kafka-ui:v1.5.0
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: KAFKA_CLUSTERS_0_NAME
+              value: petservices
+            - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
+              value: kafka.infra.svc.cluster.local:9092
+            - name: KAFKA_CLUSTERS_0_READONLY
+              value: "true"
+            - name: JAVA_OPTS
+              value: -XX:MaxRAMPercentage=75
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-ui
+  namespace: infra
+spec:
+  selector:
+    app: kafka-ui
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

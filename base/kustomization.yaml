@@ -5,6 +5,7 @@ resources:
   - 00-namespaces.yaml
   - infra/postgres.yaml
   - infra/kafka.yaml
+  - infra/kafka-ui.yaml
   - apps/petservices.yaml
   - apps/agendamento.yaml
   - apps/historico.yaml
