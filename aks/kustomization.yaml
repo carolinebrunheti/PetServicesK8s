@@ -12,7 +12,7 @@ images:
     newTag: "b05d85a"
   - name: agendamento
     newName: acrpetservicesf3c82b.azurecr.io/agendamento
-    newTag: "f9c9623"
+    newTag: "bc242c3"
   - name: historico
     newName: acrpetservicesf3c82b.azurecr.io/historico
     newTag: "d13c4b4"
