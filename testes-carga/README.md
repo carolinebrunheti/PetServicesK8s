@@ -12,6 +12,19 @@ Além do tempo das requisições, ele mede quanto tempo os eventos levam para at
 
 ## Rodar
 
+Com painel ao vivo (graficos em http://127.0.0.1:5665, abre sozinho no navegador) e relatorio HTML
+salvo em `relatorios/` (ignorado pelo git). Pede o login do admin sem mostrar a senha:
+
+```bash
+bash rodar.sh smoke
+bash rodar.sh load 2replicas     # o 2o argumento entra no nome do relatorio
+```
+
+O painel roda so na sua maquina: nada vai para a Grafana e nao ha custo.
+O relatorio so e gerado em testes com mais de alguns segundos.
+
+Sem painel, direto no k6:
+
 ```bash
 cd testes-carga
 export ADMIN_EMAIL=email-do-admin ADMIN_SENHA='senha-do-admin'

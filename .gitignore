@@ -7,3 +7,6 @@ kubeconfig*
 *.key
 *.crt
 secrets*.yaml
+
+# relatorios HTML gerados pelo k6 (testes-carga/rodar.sh)
+testes-carga/relatorios/
