@@ -35,10 +35,25 @@ jobs:
       - name: Aplicar manifests
         run: kubectl apply -k aks
 
-      # falha o workflow se a versao nova nao ficar pronta (o pod antigo
-      # continua no ar ate o novo passar na readiness probe)
-      - name: Esperar o rolling update
+      # Espera cada app ficar pronto (o pod antigo continua no ar ate o novo
+      # passar na readiness probe). Se o rollout de um app falhar, faz o
+      # rollback SO desse app (um undo nos outros voltaria a versao anterior
+      # deles, que esta saudavel) e falha o workflow para avisar.
+      # O rollback nao corrige o git: o kustomization continua com a tag ruim,
+      # e o proximo deploy a aplicaria de novo. Corrija com git revert.
+      - name: Esperar o rolling update (com rollback automatico)
         run: |
+          falharam=""
           for app in petservices agendamento historico; do
-            kubectl rollout status deploy/$app -n petservices --timeout=5m
+            if ! kubectl rollout status deploy/$app -n petservices --timeout=5m; then
+              echo "::error::Rollout de $app falhou. Fazendo rollback para a versao anterior."
+              kubectl rollout undo deploy/$app -n petservices
+              kubectl rollout status deploy/$app -n petservices --timeout=5m || true
+              echo "$app agora roda: $(kubectl get deploy/$app -n petservices -o jsonpath='{.spec.template.spec.containers[0].image}')"
+              falharam="$falharam $app"
+            fi
           done
+          if [ -n "$falharam" ]; then
+            echo "::error::Rollback feito em:$falharam. O git ainda tem a versao ruim: faca git revert do commit."
+            exit 1
+          fi
