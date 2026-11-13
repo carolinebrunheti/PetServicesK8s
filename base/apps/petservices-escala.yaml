@@ -1,0 +1,45 @@
+# Escala automatica (HPA) e protecao contra interrupcoes (PDB) do petservices.
+#
+# HPA: o Kubernetes mede a CPU dos pods (metrics-server) e ajusta o numero de
+# replicas entre 2 e 4 para manter a media perto de 70% do REQUEST de CPU.
+# Com requests.cpu=100m, isso e ~70m por pod: o login (bcrypt) passa disso facil.
+# Como o HPA passa a controlar as replicas, o Deployment NAO define mais `replicas`
+# (senao cada `kubectl apply` do deploy voltaria o numero para o do arquivo).
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: petservices
+  namespace: petservices
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: petservices
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    # para reduzir, espera a CPU ficar baixa por 2 min (o padrao e 5 min),
+    # para nao ficar subindo e descendo a cada oscilacao
+    scaleDown:
+      stabilizationWindowSeconds: 120
+---
+# PDB: em interrupcoes "voluntarias" (drain de no, upgrade do cluster, eviction),
+# o Kubernetes so pode tirar um pod do petservices se continuar pelo menos 1 pronto.
+# Nao protege contra falhas (OOMKill, no que cai): isso e trabalho das replicas.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: petservices
+  namespace: petservices
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: petservices
