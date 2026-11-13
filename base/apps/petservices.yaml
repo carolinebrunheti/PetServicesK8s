@@ -5,7 +5,7 @@ metadata:
   name: petservices
   namespace: petservices
 spec:
-  replicas: 1
+  # sem `replicas`: quem decide e o HPA (petservices-escala.yaml)
   selector:
     matchLabels:
       app: petservices

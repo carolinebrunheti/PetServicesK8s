@@ -7,6 +7,7 @@ resources:
   - infra/kafka.yaml
   - infra/kafka-ui.yaml
   - apps/petservices.yaml
+  - apps/petservices-escala.yaml
   - apps/agendamento.yaml
   - apps/historico.yaml
   - network-policies.yaml
