@@ -2,10 +2,14 @@
 # que as APIs fazem trocando a versao da imagem) e aplicado no AKS.
 name: Deploy no AKS
 
+# DESATIVADO em 2026-11-15: o cluster aks-petservices e o ACR foram apagados da
+# Azure (fim da assinatura de testes). Para reativar, recrie a infraestrutura
+# (README), rode o configurar-github-oidc.sh, devolva o gatilho de push abaixo e
+# tire o "if: false" do job deploy.
 on:
-  push:
-    branches: [main]
-    paths: ["base/**", "aks/**"]
+  # push:
+  #   branches: [main]
+  #   paths: ["base/**", "aks/**"]
   workflow_dispatch:   # botao "Run workflow" para aplicar na mao
 
 # dois deploys nunca rodam ao mesmo tempo; o segundo espera o primeiro
@@ -19,6 +23,7 @@ permissions:
 
 jobs:
   deploy:
+    if: false   # desativado: nao ha mais cluster (ver o comentario no topo)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
