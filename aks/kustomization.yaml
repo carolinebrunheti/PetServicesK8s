@@ -8,11 +8,11 @@ resources:
   - letsencrypt.yaml
 images:
   - name: petservices
-    newName: acrpetservicesf3c82b.azurecr.io/petservices
+    newName: acrpetservicesexemplo.azurecr.io/petservices
     newTag: "9153681"
   - name: agendamento
-    newName: acrpetservicesf3c82b.azurecr.io/agendamento
+    newName: acrpetservicesexemplo.azurecr.io/agendamento
     newTag: "6ff673a"
   - name: historico
-    newName: acrpetservicesf3c82b.azurecr.io/historico
+    newName: acrpetservicesexemplo.azurecr.io/historico
     newTag: "8eaf5de"

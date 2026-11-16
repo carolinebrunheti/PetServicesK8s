@@ -9,7 +9,7 @@ import exec from 'k6/execution';
 import { check, sleep } from 'k6';
 import { Trend, Counter } from 'k6/metrics';
 
-const BASE = __ENV.BASE_URL || 'https://petservices-f3c82b.eastus2.cloudapp.azure.com';
+const BASE = __ENV.BASE_URL || 'https://petservices-exemplo.eastus2.cloudapp.azure.com';
 const TIPO = __ENV.TIPO || 'smoke';
 
 // tempo ate o pet/dono recem-criado existir no Agendamento (consistencia eventual)

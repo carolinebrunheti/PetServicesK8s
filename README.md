@@ -42,9 +42,9 @@ kubectl port-forward -n petservices svc/petservices 8081:8081
 ## Subir no AKS
 
 ```bash
-az acr login -n acrpetservicesf3c82b
-docker tag petservices:0.1 acrpetservicesf3c82b.azurecr.io/petservices:0.1   # idem agendamento e historico
-docker push acrpetservicesf3c82b.azurecr.io/petservices:0.1
+az acr login -n acrpetservicesexemplo
+docker tag petservices:0.1 acrpetservicesexemplo.azurecr.io/petservices:0.1   # idem agendamento e historico
+docker push acrpetservicesexemplo.azurecr.io/petservices:0.1
 kubectl config use-context aks-petservices
 ./criar-secrets.sh email-do-admin
 kubectl apply -k cert-manager   # uma vez; espere os pods do namespace cert-manager ficarem Ready
