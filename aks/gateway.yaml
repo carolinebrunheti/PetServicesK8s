@@ -12,8 +12,8 @@ spec:
   gatewayClassName: approuting-istio
   infrastructure:
     annotations:
-      # vira o endereco petservices-f3c82b.eastus2.cloudapp.azure.com
-      service.beta.kubernetes.io/azure-dns-label-name: petservices-f3c82b
+      # vira o endereco petservices-exemplo.eastus2.cloudapp.azure.com
+      service.beta.kubernetes.io/azure-dns-label-name: petservices-exemplo
     parametersRef:
       group: ""
       kind: ConfigMap
@@ -28,7 +28,7 @@ spec:
     - name: https
       protocol: HTTPS
       port: 443
-      hostname: petservices-f3c82b.eastus2.cloudapp.azure.com
+      hostname: petservices-exemplo.eastus2.cloudapp.azure.com
       tls:
         mode: Terminate
         certificateRefs:
